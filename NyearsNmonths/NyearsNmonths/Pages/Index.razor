@@ -1,0 +1,137 @@
+﻿@page "/"
+@using Toolbelt.Blazor.TwitterShareButton
+
+
+@if (is_AgeSpecifyEnable)
+{
+    <h1>N才Nヶ月を計算します</h1>
+}
+else
+{
+    <h1>N才Nヶ月を計算します(ランダムモード)</h1>
+}
+<hr />
+<p style="margin-bottom:0px;">生年月日を入力</p>
+<RadzenDatePicker Style="margin-top:0px;margin-bottom:10px;" @bind-Value="dt" Change="change" DateFormat="yyyy/MM/dd" />
+<br />
+<RadzenCheckBox @bind-Value="is_AgeSpecifyEnable" TValue="bool"></RadzenCheckBox>
+<RadzenLabel Text="年齢指定モードにする" Component="CheckBox" Style="margin-bottom: 10px" />
+
+@if (is_AgeSpecifyEnable == true)
+{
+    <br />
+    <p style="margin-bottom:0px;">設定する年齢を入力</p>
+    <RadzenNumeric Style="margin-top:0px;margin-bottom:10px;" TValue="int" Min="0" Max="123" @bind-Value="year"></RadzenNumeric>
+}
+<br />
+
+<RadzenButton Click="onClick" Style="margin-bottom:10px;">計算</RadzenButton>
+
+@if (is_AgeSpecifyEnable ==false)
+{
+    <h2>ランダムのしくみ</h2>
+    <p>
+        ランダムの場合、
+        <strong>区間(0,生年月日から計算した現在の年齢)</strong>
+        からランダムで年齢を指定して計算しています。
+    </p>
+}
+
+@if (status != null)
+{
+    <hr />
+    <p style="font-size:large;">@status</p>
+    <h3>結果をシェア</h3>
+    <TwitterShareButton Text="@tweetMsg" Size="Large">
+    </TwitterShareButton>
+}
+<hr />
+
+
+<h2>使用したもの</h2>
+<ul>
+    <li>Microsoft C-Sharp 8.0</li>
+    <li>ASP.NET Core 3.1</li>
+    <li>Blazor WebAssembly 3.2.0</li>
+    <li>Radzen.Blazor</li>
+    <li>Toolbelt.Blazor.TwitterShareButton</li>
+</ul>
+
+<h2>プライバシー</h2>
+<p>このWebアプリでは生年月日情報は保存しておりません。</p>
+<p>また、生年月日情報はN才Nヶ月を計算する目的にのみ使用しています。</p>
+
+@code{
+    DateTime? dt = DateTime.Now;
+    string status = null;
+    string tweetMsg;
+    int year;
+    bool is_AgeSpecifyEnable = false;
+
+    //初期化処理
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dt = DateTime.Now;
+            year = 2;
+            StateHasChanged();
+        }
+    }
+
+    private void onClick()
+    {
+        if (is_AgeSpecifyEnable)
+        {
+            status = String.Format("あなたは \"{0}才{1}ヶ月\" です。", year, calMonthsDiff() - (12 * year));
+            tweetMsg = status + " | N才Nヶ月計算";
+        }
+        else
+        {
+            int ryear = randomYear();
+            status = String.Format("あなたは \"{0}才{1}ヶ月\" です。", ryear, calMonthsDiff() - (12 * ryear));
+            tweetMsg = status + " | ランダムN才Nヶ月計算";
+        }
+    }
+
+    private void change()
+    {
+        if (dt == null) dt = DateTime.Now;
+    }
+
+    private int calYearDiff()
+    {
+        var timespan = DateTime.Now - dt;
+        return timespan.Value.Days / 365;
+    }
+
+    /// <summary>
+    /// ランダムで年齢を生成します
+    /// </summary>
+    /// <returns>整数</returns>
+    private int randomYear()
+    {
+        var r = new Random();
+        return r.Next(0, calYearDiff());
+    }
+
+    /// <summary>
+    /// 月の差分計算を行う
+    /// uint monthsDiffが0を下回ることはない
+    /// dtがnullの場合、現在時刻を入れる
+    /// </summary>
+    /// <returns></returns>
+    private uint calMonthsDiff()
+    {
+        DateTime earlyDate = (dt > DateTime.Now) ? DateTime.Now.Date : (dt ?? DateTime.Now).Date;
+        DateTime lateDate = (dt > DateTime.Now) ? (dt ?? DateTime.Now).Date : DateTime.Now.Date;
+
+        uint monthsDiff = 1;
+        while (earlyDate.AddMonths((int)monthsDiff) <= lateDate)
+        {
+            monthsDiff++;
+        }
+
+        return monthsDiff - 1;
+    }
+}
